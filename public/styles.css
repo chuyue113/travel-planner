@@ -868,8 +868,18 @@ table.data tbody tr:hover { background: var(--surface-2); }
   .view { padding: 14px 12px 32px; }
   .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .row-item { flex-direction: column; gap: 8px; }
-  .row-item.rem-item { flex-direction: row; }
   .row-item .side { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
+  /* 提醒項手機版維持橫排（色條＋勾選框＋內容＋操作按鈕）。
+     此時 .side 不可套用上面的 width:100%，否則會把內容欄壓縮成「一字一行」，
+     故單獨覆寫為依內容寬度、不壓縮。 */
+  .row-item.rem-item { flex-direction: row; gap: 10px; }
+  .row-item.rem-item .side { width: auto; flex-shrink: 0; justify-content: flex-end; }
+  /* 提醒頁統計卡數值都很短（0/1/2…），手機改為三等分一排，
+     避免三張卡豎排占滿整個畫面。其他頁面的金額卡不受影響。 */
+  .grid.cols-3.stat-compact { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .grid.cols-3.stat-compact .stat { padding: 10px 9px; }
+  .grid.cols-3.stat-compact .stat .lbl { font-size: 11px; gap: 3px; white-space: nowrap; }
+  .grid.cols-3.stat-compact .stat .val { font-size: 18px; margin-top: 2px; }
   .modal { max-height: 94dvh; border-radius: 16px; }
   .donut-wrap { justify-content: center; }
 }

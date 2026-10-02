@@ -1560,7 +1560,7 @@ function viewReminders() {
 
   const pending = (S.reminders || []).filter((r) => !r.done).length;
   return pageHead(t('re.title'), t('re.subtitle'), tools) +
-    `<div class="grid cols-3 mb12">
+    `<div class="grid cols-3 stat-compact mb12">
       <div class="stat"><div class="lbl">⏳ ${esc(t('re.pending'))}</div><div class="val">${pending}</div></div>
       <div class="stat"><div class="lbl">✅ ${esc(t('re.completed'))}</div>
         <div class="val">${(S.reminders || []).filter((r) => r.done).length}</div></div>
