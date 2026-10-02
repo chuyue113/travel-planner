@@ -2066,8 +2066,13 @@ async function uploadImage(file) {
   if (!/^image\//.test(file.type)) { toast(t('fd.notImage')); return ''; }
   if (file.size > 12 * 1024 * 1024) { toast(t('fd.imageTooBig')); return ''; }
   const dataUrl = await readFileAsDataURL(file);
-  const res = await sendOp({ t: 'upload', dataUrl, name: file.name }, { silent: true });
-  return (res && res.url) || '';
+  try {
+    const res = await sendOp({ t: 'upload', dataUrl, name: file.name }, { silent: true });
+    return (res && res.url) || '';
+  } catch (_) {
+    /* 單張失敗不影響其餘圖片；sendOp 已提示錯誤 */
+    return '';
+  }
 }
 
 /* ==================================================================

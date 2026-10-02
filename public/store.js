@@ -287,9 +287,12 @@ const Store = (function () {
 
     /* 套用一個操作並持久化 */
     commit: async function (op, ctx) {
-      /* 圖片上傳不屬於狀態操作，單獨處理 */
+      /* 圖片上傳不屬於狀態操作，單獨處理。
+         注意：回傳結構必須與一般操作一致（{ result, state }），
+         否則呼叫端取不到 result.url，且 S = data.state 會變成 undefined。 */
       if (op && op.t === 'upload') {
-        return this.upload(op.dataUrl, op.name);
+        const url = await this.upload(op.dataUrl, op.name);
+        return { result: { url: url }, state: publicState(state, unlocked) };
       }
       /* 寫入前先拉一次雲端最新狀態，降低多人同時編輯的覆蓋風險 */
       if (cloudEnabled()) {
