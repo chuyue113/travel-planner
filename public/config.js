@@ -14,8 +14,9 @@ window.TP_CONFIG = {
   /* 連結安全閘門：關鍵字「肉丸」 */
   gateHash: '2edc7bc97ae4153b59d0be669aa265e534095d0ad6e390e9138fc305f44403e1',
 
-  /* 管理員密碼：5888（保護記帳／預算／資料夾編輯／清空資料） */
-  adminHash: 'd92cffdfd1ba74ef6e68b2c2fff06133bee7238a4e3ba9798e9024abbb175c6c',
+  /* 管理員密碼（保護記帳／預算／資料夾編輯／清空資料）
+     已於 2026-10 由 4 位數字更換為高強度密碼，降低公開倉庫下的暴力破解風險。 */
+  adminHash: '2b76d4c24ea6c01dc110adbdf4782b6795e3cb896bc8065140c25b5207c1a5ae',
 
   /* 雲端資料庫（Supabase）：填入後自動切換為雲端同步模式 */
   supabaseUrl: '',
