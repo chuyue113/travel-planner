@@ -17,6 +17,8 @@ const Store = (function () {
   const CFG = Object.assign({
     gateHash: '',
     adminHash: '',
+    viewHash: '',
+    viewSealed: null,
     supabaseUrl: '',
     supabaseAnonKey: '',
     table: 'trip_state',
@@ -26,13 +28,17 @@ const Store = (function () {
 
   const LS_KEY = 'tp.state.v1';
   const PBKDF2_ITER = 120000;
-  const LOCKED_KEYS = ['expenses', 'budgets'];
+  const LOCKED_KEYS = ['expenses', 'budgets'];   // 管理員密碼
+  const VIEW_KEYS = ['itinerary', 'rooms'];      // 查看密碼（僅能看）
 
   let mode = 'local';
   let state = null;         // 記憶體中的完整狀態
   let unlocked = false;
   let adminPassword = '';   // 僅存在於記憶體，解鎖期間使用
   let lockedBlob = null;    // 雲端上的加密區塊（未解鎖時原樣保留）
+  let viewUnlocked = false;
+  let viewPassword = '';    // 僅存在於記憶體
+  let viewBlob = null;      // 行程／房間的加密區塊
   let hasSubtle = !!(window.crypto && window.crypto.subtle);
 
   const enc = new TextEncoder();
@@ -97,6 +103,41 @@ const Store = (function () {
     const key = await deriveKey(adminPassword, salt);
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, unb64(blob.data));
     return JSON.parse(dec.decode(plain));
+  }
+
+  /* ---- 行程／房間：以「查看密碼」加解密 ---- */
+
+  async function encryptViewLocked(obj) {
+    if (!hasSubtle || !viewPassword) return null;
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(viewPassword, salt);
+    const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, enc.encode(JSON.stringify(obj)));
+    return { v: 1, iter: PBKDF2_ITER, salt: b64(salt), iv: b64(iv), data: b64(data) };
+  }
+
+  async function decryptViewLocked(blob) {
+    if (!hasSubtle || !blob || !viewPassword) return null;
+    const salt = unb64(blob.salt);
+    const iv = unb64(blob.iv);
+    const key = await deriveKey(viewPassword, salt);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, unb64(blob.data));
+    return JSON.parse(dec.decode(plain));
+  }
+
+  /* 管理員解鎖後，用管理員密碼還原出「查看密碼」，
+     讓管理員不必再輸入一次就能查看行程與房間。 */
+  async function recoverViewPassword() {
+    if (!hasSubtle || !CFG.viewSealed || !adminPassword) return '';
+    try {
+      const salt = unb64(CFG.viewSealed.salt);
+      const iv = unb64(CFG.viewSealed.iv);
+      const key = await deriveKey(adminPassword, salt);
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, unb64(CFG.viewSealed.data));
+      return dec.decode(plain);
+    } catch (_) {
+      return '';
+    }
   }
 
   /* ------------------------------ 雲端存取 ------------------------ */
@@ -175,6 +216,10 @@ const Store = (function () {
         lockedBlob = parsed.__locked;
         delete parsed.__locked;
       }
+      if (parsed && parsed.__vlock) {
+        viewBlob = parsed.__vlock;
+        delete parsed.__vlock;
+      }
       return parsed;
     } catch (_) {
       return null;
@@ -184,6 +229,7 @@ const Store = (function () {
   function localWrite(obj) {
     const payload = Object.assign({}, obj);
     if (lockedBlob) payload.__locked = lockedBlob;
+    if (viewBlob) payload.__vlock = viewBlob;
     localStorage.setItem(LS_KEY, JSON.stringify(payload));
   }
 
@@ -220,6 +266,7 @@ const Store = (function () {
   return {
     get mode() { return mode; },
     get unlocked() { return unlocked; },
+    get viewUnlocked() { return viewUnlocked; },
     get cloud() { return cloudEnabled(); },
 
     /* 初始化：決定使用本機或雲端模式 */
@@ -240,7 +287,7 @@ const Store = (function () {
       if (!h || h !== CFG.adminHash) return false;
       adminPassword = String(password || '');
       unlocked = true;
-      /* 解開雲端／本機的加密區塊 */
+      /* 解開雲端／本機的記帳加密區塊 */
       if (lockedBlob && state) {
         try {
           const secret = await decryptLocked(lockedBlob);
@@ -249,13 +296,53 @@ const Store = (function () {
           }
         } catch (_) { /* 解密失敗：維持空白，不阻斷流程 */ }
       }
+      /* 管理員同時取得「查看」權限：還原查看密碼並解開行程／房間 */
+      await this.enableView();
       return true;
+    },
+
+    /* 查看密碼驗證：只解開行程與房間，不授予任何編輯權 */
+    unlockView: async function (password) {
+      const pw = String(password || '').trim();
+      const h = await sha256hex('tp::view::' + pw);
+      if (!h || !CFG.viewHash || h !== CFG.viewHash) return false;
+      viewPassword = pw;
+      viewUnlocked = true;
+      await this.loadView();
+      return true;
+    },
+
+    /* 由管理員密碼還原出查看密碼（管理員專用，內部呼叫） */
+    enableView: async function () {
+      const vp = await recoverViewPassword();
+      if (!vp) return false;
+      viewPassword = vp;
+      viewUnlocked = true;
+      await this.loadView();
+      return true;
+    },
+
+    /* 解開行程／房間（記憶體中還是空的時候才做） */
+    loadView: async function () {
+      if (!viewUnlocked || !viewBlob || !state) return;
+      if ((state.itinerary || []).length || (state.rooms || []).length) return;
+      try {
+        const secret = await decryptViewLocked(viewBlob);
+        if (secret) for (const k of VIEW_KEYS) state[k] = Array.isArray(secret[k]) ? secret[k] : [];
+      } catch (_) { /* ignore */ }
     },
 
     lock: function () {
       unlocked = false;
       adminPassword = '';
       if (state) for (const k of LOCKED_KEYS) state[k] = [];
+    },
+
+    /* 只鎖上行程與房間（記帳維持原狀） */
+    lockView: function () {
+      viewUnlocked = false;
+      viewPassword = '';
+      if (state) for (const k of VIEW_KEYS) state[k] = [];
     },
 
     /* 讀取狀態（回傳對外版本，未解鎖時不含記帳／預算） */
@@ -266,7 +353,12 @@ const Store = (function () {
         if (row) {
           raw = row.data || null;
           lockedBlob = raw && raw.__locked ? raw.__locked : null;
-          if (raw && raw.__locked) { raw = Object.assign({}, raw); delete raw.__locked; }
+          viewBlob = raw && raw.__vlock ? raw.__vlock : null;
+          if (raw && (raw.__locked || raw.__vlock)) {
+            raw = Object.assign({}, raw);
+            delete raw.__locked;
+            delete raw.__vlock;
+          }
         }
       } else {
         raw = localRead();
@@ -279,7 +371,9 @@ const Store = (function () {
           if (secret) for (const k of LOCKED_KEYS) state[k] = Array.isArray(secret[k]) ? secret[k] : [];
         } catch (_) { /* ignore */ }
       }
-      return publicState(state, unlocked);
+      /* 已取得查看權且記憶體中沒有行程／房間 → 嘗試解密 */
+      await this.loadView();
+      return publicState(state, unlocked, viewUnlocked);
     },
 
     /* 取得完整狀態（僅供內部與匯出使用） */
@@ -292,7 +386,7 @@ const Store = (function () {
          否則呼叫端取不到 result.url，且 S = data.state 會變成 undefined。 */
       if (op && op.t === 'upload') {
         const url = await this.upload(op.dataUrl, op.name);
-        return { result: { url: url }, state: publicState(state, unlocked) };
+        return { result: { url: url }, state: publicState(state, unlocked, viewUnlocked) };
       }
       /* 寫入前先拉一次雲端最新狀態，降低多人同時編輯的覆蓋風險 */
       if (cloudEnabled()) {
@@ -300,14 +394,12 @@ const Store = (function () {
           const row = await cloudRead();
           if (row && row.data && (row.data.version || 0) > (state.version || 0)) {
             const keepLocked = lockedBlob;
-            let incoming = row.data;
-            if (incoming.__locked) {
-              lockedBlob = incoming.__locked;
-              incoming = Object.assign({}, incoming);
-              delete incoming.__locked;
-            } else {
-              lockedBlob = keepLocked;
-            }
+            const keepView = viewBlob;
+            const incoming = Object.assign({}, row.data);
+            lockedBlob = incoming.__locked ? incoming.__locked : keepLocked;
+            viewBlob = incoming.__vlock ? incoming.__vlock : keepView;
+            delete incoming.__locked;
+            delete incoming.__vlock;
             const merged = normalizeState(incoming);
             if (unlocked && lockedBlob) {
               try {
@@ -315,17 +407,27 @@ const Store = (function () {
                 if (secret) for (const k of LOCKED_KEYS) merged[k] = Array.isArray(secret[k]) ? secret[k] : [];
               } catch (_) { /* ignore */ }
             }
+            if (viewUnlocked && viewBlob) {
+              try {
+                const vsecret = await decryptViewLocked(viewBlob);
+                if (vsecret) for (const k of VIEW_KEYS) merged[k] = Array.isArray(vsecret[k]) ? vsecret[k] : [];
+              } catch (_) { /* ignore */ }
+            }
             state = merged;
           }
         } catch (_) { /* 讀不到就用現有狀態 */ }
       }
 
-      const res = applyOp(state, op, { actorId: (ctx && ctx.actorId) || '', unlocked: unlocked });
+      const res = applyOp(state, op, {
+        actorId: (ctx && ctx.actorId) || '',
+        unlocked: unlocked,
+        viewUnlocked: viewUnlocked,
+      });
       state = res.state;
 
-      /* 未解鎖時不可寫入記帳／預算（applyOp 已擋），但加密區塊要原樣保留 */
+      /* 未解鎖時不可寫入記帳／行程（applyOp 已擋），但加密區塊要原樣保留 */
       await this.persist();
-      return { result: res.result, state: publicState(state, unlocked) };
+      return { result: res.result, state: publicState(state, unlocked, viewUnlocked) };
     },
 
     /* 持久化目前狀態 */
@@ -343,7 +445,23 @@ const Store = (function () {
         if (leaked) throw new Error('記帳資料已上鎖，請先解鎖再儲存');
       }
       for (const k of LOCKED_KEYS) snapshot[k] = [];
+
+      /* 行程／房間：以「查看密碼」加密後存放 */
+      if (viewUnlocked && hasSubtle && viewPassword) {
+        const vsecret = {};
+        for (const k of VIEW_KEYS) vsecret[k] = Array.isArray(state[k]) ? state[k] : [];
+        try {
+          viewBlob = await encryptViewLocked(vsecret);
+        } catch (_) { /* 加密失敗則保留舊的加密區塊 */ }
+      } else if (!viewBlob) {
+        /* 未取得查看權且沒有加密區塊：不可把行程／房間明文寫出去 */
+        const vleaked = VIEW_KEYS.some((k) => Array.isArray(state[k]) && state[k].length);
+        if (vleaked) throw new Error('行程與房間已上鎖，請先輸入查看密碼再儲存');
+      }
+      for (const k of VIEW_KEYS) snapshot[k] = [];
+
       if (lockedBlob) snapshot.__locked = lockedBlob;
+      if (viewBlob) snapshot.__vlock = viewBlob;
 
       if (cloudEnabled()) {
         await cloudWrite({ data: snapshot, version: state.version, updated_at: state.updatedAt });
@@ -374,12 +492,13 @@ const Store = (function () {
       if (!unlocked) throw new Error('匯入備份需要管理員密碼，請先解鎖');
       const payload = Object.assign({}, incoming || {});
       delete payload.__locked;
+      delete payload.__vlock;
       state = normalizeState(payload);
       state.version = (state.version || 0) + 1;
       state.updatedAt = new Date().toISOString();
       recordHistory(state, { actorId: (ctx && ctx.actorId) || '' }, { action: 'import' });
       await this.persist();
-      return publicState(state, unlocked);
+      return publicState(state, unlocked, viewUnlocked);
     },
 
     /* 本機模式的示範資料（雲端模式由 seedDemo 操作處理） */

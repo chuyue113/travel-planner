@@ -19,7 +19,11 @@ const CURRENCIES = Object.keys(SYMBOL);
 const PALETTES = [
   { id: 'teal', swatch: ['#0f766e', '#e4572e', '#e3f3f1'] },
   { id: 'rose', swatch: ['#D48D95', '#B7D5C6', '#E6A6AC'] },
+  { id: 'blue', swatch: ['#A8BEDF', '#C7D5E8', '#D8C9BA'] },
 ];
+
+/* 各配色對應的瀏覽器主題色（行動裝置網址列） */
+const PALETTE_THEME_COLOR = { teal: '#0f766e', rose: '#D48D95', blue: '#A8BEDF' };
 const PALETTE = ['#e4572e', '#17bebb', '#8e6ec8', '#f2a541', '#2f8fd8',
   '#d64570', '#3fa66b', '#b07d3a', '#6b7c85', '#a855f7'];
 
@@ -46,7 +50,9 @@ const UI = {
   me: localStorage.getItem('tp.me') || '',
   /* 解鎖狀態只存在記憶體：重新整理後需再次輸入密碼（金鑰不會留在瀏覽器） */
   unlock: false,
-  gate: localStorage.getItem('tp.gate') === '1',
+  /* 閘門只記在 sessionStorage：同一次瀏覽中重整不會重問，
+     但關掉瀏覽器／分頁後再開啟，就必須重新輸入關鍵字。 */
+  gate: sessionStorage.getItem('tp.gate') === '1',
   itView: 'list',
   exView: 'actual',
   calMonth: null,
@@ -347,7 +353,7 @@ async function doGateSubmit() {
   try {
     if (await Store.checkGate(keyword)) {
       UI.gate = true;
-      localStorage.setItem('tp.gate', '1');
+      sessionStorage.setItem('tp.gate', '1');
       hideGate();
       toast(t('gate.ok'));
       startApp();
@@ -367,7 +373,7 @@ async function doGateSubmit() {
 /* 閘門憑證失效時回到驗證畫面 */
 function gateLost() {
   UI.gate = false;
-  localStorage.removeItem('tp.gate');
+  sessionStorage.removeItem('tp.gate');
   showGate();
 }
 
@@ -461,7 +467,7 @@ function applyTheme() {
   document.documentElement.setAttribute('data-palette', UI.palette);
   $('#themeBtn').textContent = dark ? '☀️' : '🌙';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', UI.palette === 'rose' ? '#D48D95' : '#0f766e');
+  if (meta) meta.setAttribute('content', PALETTE_THEME_COLOR[UI.palette] || '#0f766e');
 }
 
 function setPalette(p) {
@@ -589,6 +595,57 @@ async function doUnlock() {
     el.value = '';
     el.focus();
   }
+}
+
+/* ------------------------ 行程／房間的查看鎖 ---------------------- */
+
+/* 行程與房間受「查看密碼」保護：只能看，不能改。
+   編輯／新增／刪除仍需要管理員密碼。 */
+function viewLockedScreen(kind) {
+  const title = kind === 'rm' ? t('rm.title') : t('it.title');
+  const subtitle = kind === 'rm' ? t('rm.subtitle') : t('it.subtitle');
+  return pageHead(title, subtitle, '') +
+    `<div class="lockbox">
+      <div class="lockicon">🔐</div>
+      <h3>${esc(t('vlock.heading'))}</h3>
+      <p class="muted small">${esc(t('vlock.hint'))}</p>
+      <form id="vlockForm" autocomplete="off">
+        <input type="password" id="vlockPwd" autocomplete="off"
+          placeholder="${esc(t('vlock.placeholder'))}" aria-label="${esc(t('vlock.placeholder'))}">
+        <button class="btn primary" type="submit">${esc(t('vlock.submit'))}</button>
+      </form>
+      <p class="small lock-err" id="vlockErr"></p>
+      <p class="muted small" style="margin:14px 0 0">${esc(t('vlock.onlyView'))}</p>
+    </div>`;
+}
+
+async function doViewUnlock() {
+  const el = $('#vlockPwd');
+  const err = $('#vlockErr');
+  if (!el) return;
+  const pwd = el.value.trim();
+  if (!pwd) return;
+  el.disabled = true;
+  if (await Store.unlockView(pwd)) {
+    await loadState();
+    toast(t('vlock.unlocked'));
+    render();
+  } else {
+    if (err) err.textContent = t('vlock.wrong');
+    el.disabled = false;
+    el.value = '';
+    el.focus();
+  }
+}
+
+function lockViewNow() {
+  Store.lockView();
+  loadState().then(render);
+}
+
+/* 頁面上的「立即鎖定」按鈕（行程／房間共用） */
+function viewLockButton() {
+  return `<button class="btn" data-act="lock-view">🔒 ${esc(t('vlock.lock'))}</button>`;
 }
 
 /* ------------------------------ 更新歷史 -------------------------- */
@@ -849,11 +906,13 @@ function priorityBadge(p) {
 /* ------------------------------ 行程 ------------------------------ */
 
 function viewItinerary() {
+  if (S.viewLocked) return viewLockedScreen('it');
   const tools = `
     <div class="seg">
       <button class="${UI.itView === 'list' ? 'on' : ''}" data-act="it-view" data-v="list">${esc(t('it.list'))}</button>
       <button class="${UI.itView === 'calendar' ? 'on' : ''}" data-act="it-view" data-v="calendar">${esc(t('it.calendar'))}</button>
     </div>
+    ${viewLockButton()}
     <button class="btn primary" data-act="add-itinerary">＋ ${esc(t('it.addItem'))}</button>`;
 
   let body = '';
@@ -1290,12 +1349,14 @@ function donutSVG(parts, total, size, thickness, centerText) {
 /* ------------------------------ 房間 ------------------------------ */
 
 function viewRooms() {
+  if (S.viewLocked) return viewLockedScreen('rm');
   const rooms = S.rooms || [];
   const assigned = new Set();
   for (const r of rooms) for (const m of (r.memberIds || [])) assigned.add(m);
   const free = S.members.filter((m) => !assigned.has(m.id));
 
-  const tools = `<button class="btn primary" data-act="add-room">＋ ${esc(t('rm.add'))}</button>`;
+  const tools = `${viewLockButton()}
+    <button class="btn primary" data-act="add-room">＋ ${esc(t('rm.add'))}</button>`;
 
   if (!rooms.length) {
     return pageHead(t('rm.title'), t('rm.subtitle'), tools) +
@@ -2123,6 +2184,7 @@ document.addEventListener('click', async (e) => {
   if (act === 'open-history') { openModal(viewHistory()); return; }
   if (act === 'manual-save') { manualSave(); return; }
   if (act === 'lock-now') { lockExpenses(); closeModal(); return; }
+  if (act === 'lock-view') { lockViewNow(); return; }
   if (act === 'admin-unlock') { closeModal(); openAdminPrompt(); return; }
   if (act === 'export-json') { exportJSON(); return; }
   if (act === 'add-link') {
@@ -2183,11 +2245,12 @@ document.addEventListener('click', async (e) => {
   if (act === 'cal-day') { UI.calSelected = el.dataset.date; UI.itView = 'list'; render(); return; }
   if (act === 'clear-day') { UI.calSelected = null; render(); return; }
   if (act === 'add-itinerary') {
-    const m = openModal(itineraryForm(null, UI.calSelected)); bindItineraryForm(m); return;
+    withAdmin(() => { const m = openModal(itineraryForm(null, UI.calSelected)); bindItineraryForm(m); });
+    return;
   }
   if (act === 'edit-itinerary') {
     const it = S.itinerary.find((x) => x.id === el.dataset.id);
-    if (it) { const m = openModal(itineraryForm(it)); bindItineraryForm(m); }
+    if (it) withAdmin(() => { const m = openModal(itineraryForm(it)); bindItineraryForm(m); });
     return;
   }
   if (act === 'vote-it') {
@@ -2224,17 +2287,20 @@ document.addEventListener('click', async (e) => {
   }
 
   /* ---- 房間 ---- */
-  if (act === 'add-room') { const m = openModal(roomForm(null)); bindRoomForm(m); return; }
-  if (act === 'edit-room') {
-    const r = S.rooms.find((x) => x.id === el.dataset.id);
-    if (r) { const m = openModal(roomForm(r)); bindRoomForm(m); }
+  if (act === 'add-room') {
+    withAdmin(() => { const m = openModal(roomForm(null)); bindRoomForm(m); });
     return;
   }
-  if (act === 'assign') { openAssign(el.dataset.room); return; }
+  if (act === 'edit-room') {
+    const r = S.rooms.find((x) => x.id === el.dataset.id);
+    if (r) withAdmin(() => { const m = openModal(roomForm(r)); bindRoomForm(m); });
+    return;
+  }
+  if (act === 'assign') { withAdmin(() => openAssign(el.dataset.room)); return; }
   if (act === 'unassign') {
     const r = S.rooms.find((x) => x.id === el.dataset.room);
     if (!r) return;
-    await sendOp({ t: 'assign', col: 'rooms', id: r.id, memberIds: (r.memberIds || []).filter((x) => x !== el.dataset.id) }, { silent: true });
+    withAdmin(() => sendOp({ t: 'assign', col: 'rooms', id: r.id, memberIds: (r.memberIds || []).filter((x) => x !== el.dataset.id) }, { silent: true }));
     render(); return;
   }
 
@@ -2328,7 +2394,8 @@ document.addEventListener('click', async (e) => {
       await sendOp({ t: 'delete', col, id });
       if (col === 'folders' && UI.openFolder === id) UI.openFolder = null;
     });
-    if (col === 'folders') withAdmin(run); else run();
+    /* 資料夾、行程、房間的刪除都需要管理員；其餘（記帳等）由記帳鎖把關 */
+    if (['folders', 'itinerary', 'rooms'].indexOf(col) !== -1) withAdmin(run); else run();
     return;
   }
 
@@ -2716,6 +2783,10 @@ document.addEventListener('submit', (e) => {
   if (e.target && e.target.id === 'lockForm') {
     e.preventDefault();
     doUnlock();
+  }
+  if (e.target && e.target.id === 'vlockForm') {
+    e.preventDefault();
+    doViewUnlock();
   }
   if (e.target && e.target.id === 'admForm') {
     e.preventDefault();

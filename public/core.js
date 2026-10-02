@@ -13,6 +13,13 @@ const COLLECTIONS = ['members', 'itinerary', 'expenses', 'budgets', 'rooms', 'fo
 /* 需要管理員解鎖才能檢視／寫入的資料集合（記帳與預算同鎖） */
 const LOCKED_COLLECTIONS = ['expenses', 'budgets'];
 
+/* 需要「查看密碼」才能檢視的資料集合（行程與房間）。
+   僅供查看：新增／編輯／刪除仍需要管理員密碼。 */
+const VIEW_COLLECTIONS = ['itinerary', 'rooms'];
+
+/* 這些操作屬於「編輯」，即使已輸入查看密碼也必須是管理員 */
+const VIEW_WRITE_OPS = ['add', 'update', 'delete', 'assign', 'move'];
+
 /* 每個資料夾／每個項目可放置的圖片張數上限 */
 const IMAGE_LIMIT = 10;
 
@@ -149,18 +156,25 @@ function cleanupReferences(state, col, id) {
   }
 }
 
+/* 受保護的集合：記帳／預算（管理員鎖）與行程／房間（查看鎖）。
+   這些集合的標題若寫進歷史紀錄，就會以明文留在雲端，
+   等於繞過了加密，因此歷史紀錄一律不記它們的 title。 */
+const NO_TITLE_HISTORY = LOCKED_COLLECTIONS.concat(VIEW_COLLECTIONS);
+
 function recordHistory(state, ctx, entry) {
   if (!Array.isArray(state.history)) state.history = [];
   const actor = (ctx && ctx.actorId)
     ? (state.members || []).find((m) => m.id === ctx.actorId)
     : null;
+  const e = Object.assign({}, entry);
+  if (e.col && NO_TITLE_HISTORY.indexOf(e.col) !== -1) { delete e.title; delete e.detail; }
   state.history.push(Object.assign({
     id: uid('hst'),
     at: new Date().toISOString(),
     actorId: (ctx && ctx.actorId) || '',
     actorName: actor ? actor.name : '',
     version: state.version,
-  }, entry));
+  }, e));
   if (state.history.length > HISTORY_LIMIT) {
     state.history.splice(0, state.history.length - HISTORY_LIMIT);
   }
@@ -180,6 +194,15 @@ function applyOp(state, op, ctx) {
 
   if (LOCKED_COLLECTIONS.indexOf(op.col) !== -1 && !ctx.unlocked) {
     throw new Error('記帳資料已上鎖，請先輸入密碼');
+  }
+  /* 行程與房間：未輸入查看密碼前一律不可寫入，避免在看不到內容的情況下誤改 */
+  if (VIEW_COLLECTIONS.indexOf(op.col) !== -1 && !ctx.viewUnlocked) {
+    throw new Error('行程與房間已上鎖，請先輸入查看密碼');
+  }
+  /* 行程與房間的新增／編輯／刪除／分配：僅限管理員（查看密碼不足） */
+  if (VIEW_COLLECTIONS.indexOf(op.col) !== -1
+      && VIEW_WRITE_OPS.indexOf(op.t) !== -1 && !ctx.unlocked) {
+    throw new Error('新增、編輯或刪除行程與房間需要管理員密碼');
   }
   if (isFolderWrite(op) && !ctx.unlocked) {
     throw new Error('編輯資料夾需要管理員密碼，請先解鎖');
@@ -379,12 +402,18 @@ function applyOp(state, op, ctx) {
 }
 
 /* 對外可見的狀態：未解鎖時不含記帳／預算資料與其相關歷史 */
-function publicState(state, unlocked) {
+function publicState(state, unlocked, viewUnlocked) {
   const out = Object.assign({}, state);
   out.locked = !unlocked;
+  out.viewLocked = !viewUnlocked;
   out.expenses = unlocked ? state.expenses : [];
   out.budgets = unlocked ? (state.budgets || []) : [];
-  out.history = (state.history || []).filter((h) => unlocked || LOCKED_COLLECTIONS.indexOf(h.col) === -1);
+  for (const k of VIEW_COLLECTIONS) out[k] = viewUnlocked ? (state[k] || []) : [];
+  out.history = (state.history || []).filter((h) => {
+    if (!unlocked && LOCKED_COLLECTIONS.indexOf(h.col) !== -1) return false;
+    if (!viewUnlocked && VIEW_COLLECTIONS.indexOf(h.col) !== -1) return false;
+    return true;
+  });
   return out;
 }
 

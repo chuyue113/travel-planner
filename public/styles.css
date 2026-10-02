@@ -78,6 +78,54 @@
   --hero-b: #5D7C6B;
 }
 
+/* ---------------- 配色：藍調（#A8BEDF / #C7D5E8 / #EFE4D4 / #D8C9BA） ---------------- */
+
+:root[data-palette="blue"] {
+  --bg: #F6F8FC;
+  --bg-soft: #EDF2FA;
+  --surface: #FFFFFF;
+  --surface-2: #FBF8F4;
+  --text: #2B3A52;
+  --muted: #7A879C;
+  --line: #E3EAF5;
+  --line-strong: #C7D5E8;
+  --primary: #A8BEDF;
+  --primary-ink: #24344C;
+  --primary-soft: #EAF0FA;
+  --accent: #C3A98C;
+  --warn: #B9834A;
+  --warn-soft: #F7EEE0;
+  --danger: #C2525C;
+  --danger-soft: #FBE7E8;
+  --ok: #6E9B84;
+  --ok-soft: #E8F3ED;
+  --hero-a: #8AA5CC;
+  --hero-b: #C7B49B;
+}
+
+:root[data-palette="blue"][data-theme="dark"] {
+  --bg: #12171F;
+  --bg-soft: #182029;
+  --surface: #1B232E;
+  --surface-2: #212B37;
+  --text: #E6ECF5;
+  --muted: #93A0B4;
+  --line: #2B3745;
+  --line-strong: #3A4959;
+  --primary: #A8BEDF;
+  --primary-ink: #16202E;
+  --primary-soft: #263241;
+  --accent: #D8C9BA;
+  --warn: #E0B173;
+  --warn-soft: #2E2719;
+  --danger: #F08A8A;
+  --danger-soft: #3A2225;
+  --ok: #8CC7A6;
+  --ok-soft: #1E332A;
+  --hero-a: #7A93B8;
+  --hero-b: #A8967F;
+}
+
 [data-theme="dark"] {
   --bg: #0e1619;
   --bg-soft: #131e22;

@@ -266,6 +266,14 @@ const I18N = {
     'lock.lock': '立即鎖定',
     'lock.locked': '已上鎖',
     'lock.unlockToView': '輸入密碼後才能查看記帳內容。',
+    'vlock.heading': '行程與房間已上鎖',
+    'vlock.hint': '這些內容受「查看密碼」保護，輸入後才能查看。',
+    'vlock.placeholder': '請輸入查看密碼',
+    'vlock.submit': '查看',
+    'vlock.wrong': '密碼錯誤，請再試一次',
+    'vlock.unlocked': '已解鎖，可查看行程與房間',
+    'vlock.lock': '立即鎖定',
+    'vlock.onlyView': '此密碼僅能查看；新增／編輯／刪除仍需管理員密碼。',
 
     'gate.title': '請輸入通關關鍵字',
     'gate.hint': '請謹慎選擇是否進入',
@@ -301,6 +309,7 @@ const I18N = {
 
     'palette.teal': '青綠',
     'palette.rose': '玫瑰粉',
+    'palette.blue': '藍調',
 
     'hist.title': '更新歷史',
     'hist.empty': '還沒有任何更新紀錄',
@@ -590,6 +599,14 @@ const I18N = {
     'lock.lock': '立即锁定',
     'lock.locked': '已上锁',
     'lock.unlockToView': '输入密码后才能查看记账内容。',
+    'vlock.heading': '行程与房间已上锁',
+    'vlock.hint': '这些内容受「查看密码」保护，输入后才能查看。',
+    'vlock.placeholder': '请输入查看密码',
+    'vlock.submit': '查看',
+    'vlock.wrong': '密码错误，请再试一次',
+    'vlock.unlocked': '已解锁，可查看行程与房间',
+    'vlock.lock': '立即锁定',
+    'vlock.onlyView': '此密码仅能查看；新增／编辑／删除仍需管理员密码。',
 
     'gate.title': '请输入通关关键字',
     'gate.hint': '请谨慎选择是否进入',
@@ -625,6 +642,7 @@ const I18N = {
 
     'palette.teal': '青绿',
     'palette.rose': '玫瑰粉',
+    'palette.blue': '蓝调',
 
     'hist.title': '更新历史',
     'hist.empty': '还没有任何更新记录',
@@ -914,6 +932,14 @@ const I18N = {
     'lock.lock': 'Lock now',
     'lock.locked': 'Locked',
     'lock.unlockToView': 'Enter the password to view expense details.',
+    'vlock.heading': 'Itinerary & rooms are locked',
+    'vlock.hint': 'This content is protected by the view password.',
+    'vlock.placeholder': 'Enter view password',
+    'vlock.submit': 'View',
+    'vlock.wrong': 'Wrong password, please try again',
+    'vlock.unlocked': 'Unlocked — you can now view the itinerary and rooms',
+    'vlock.lock': 'Lock now',
+    'vlock.onlyView': 'This password only allows viewing; adding, editing or deleting still requires the admin password.',
 
     'gate.title': 'Enter the access keyword',
     'gate.hint': 'Please choose carefully whether to enter',
@@ -949,6 +975,7 @@ const I18N = {
 
     'palette.teal': 'Teal',
     'palette.rose': 'Rose',
+    'palette.blue': 'Blue',
 
     'hist.title': 'Update history',
     'hist.empty': 'No updates recorded yet',
