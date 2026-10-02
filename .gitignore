@@ -1,0 +1,9 @@
+node_modules/
+data/
+*.log
+.DS_Store
+
+# 早期自架版本（Node 服務），GitHub Pages 部署不使用
+server.js
+package.json
+package-lock.json

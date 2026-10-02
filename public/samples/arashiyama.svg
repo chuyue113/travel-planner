@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f3d2e"/>
+      <stop offset="55%" stop-color="#1d6b4a"/>
+      <stop offset="100%" stop-color="#7fbf6a"/>
+    </linearGradient>
+    <linearGradient id="stalk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2f7d4f"/>
+      <stop offset="45%" stop-color="#8fd07a"/>
+      <stop offset="100%" stop-color="#2b6f47"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <g opacity="0.35" fill="#0b2a1f">
+    <rect x="60" y="0" width="26" height="600"/>
+    <rect x="180" y="0" width="20" height="600"/>
+    <rect x="330" y="0" width="24" height="600"/>
+    <rect x="520" y="0" width="18" height="600"/>
+    <rect x="660" y="0" width="28" height="600"/>
+  </g>
+  <g>
+    <rect x="110" y="0" width="34" height="600" fill="url(#stalk)"/>
+    <rect x="250" y="0" width="42" height="600" fill="url(#stalk)"/>
+    <rect x="410" y="0" width="30" height="600" fill="url(#stalk)"/>
+    <rect x="600" y="0" width="46" height="600" fill="url(#stalk)"/>
+    <rect x="740" y="0" width="32" height="600" fill="url(#stalk)"/>
+  </g>
+  <g stroke="#123d2b" stroke-width="4" opacity="0.6">
+    <path d="M127 120 h-38 M127 260 h46 M127 400 h-40 M127 520 h44"/>
+    <path d="M271 90 h-50 M271 220 h54 M271 350 h-48 M271 480 h52"/>
+    <path d="M425 150 h-36 M425 300 h40 M425 450 h-38"/>
+    <path d="M623 110 h-52 M623 250 h56 M623 390 h-50 M623 520 h54"/>
+    <path d="M756 170 h-40 M756 320 h44 M756 470 h-42"/>
+  </g>
+  <g fill="#ffffff" opacity="0.09">
+    <ellipse cx="400" cy="300" rx="330" ry="150"/>
+  </g>
+  <text x="40" y="556" font-family="system-ui, sans-serif" font-size="30" font-weight="700" fill="#ffffff" opacity="0.92">嵐山竹林</text>
+  <text x="40" y="586" font-family="system-ui, sans-serif" font-size="17" fill="#ffffff" opacity="0.7">Arashiyama Bamboo Grove</text>
+</svg>

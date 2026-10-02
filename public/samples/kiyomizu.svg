@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2b3a67"/>
+      <stop offset="45%" stop-color="#a4508b"/>
+      <stop offset="75%" stop-color="#e8734a"/>
+      <stop offset="100%" stop-color="#f6c177"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3d2b4e"/>
+      <stop offset="100%" stop-color="#1d1428"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky)"/>
+  <circle cx="590" cy="330" r="52" fill="#ffd9a0" opacity="0.92"/>
+  <path d="M0 400 L120 330 L230 395 L360 300 L500 390 L640 320 L800 400 L800 600 L0 600Z" fill="url(#hill)" opacity="0.85"/>
+  <g fill="#150e1e">
+    <rect x="300" y="300" width="14" height="180"/>
+    <path d="M250 300 h114 l-18 -22 h-78 z"/>
+    <path d="M256 262 h102 l-16 -20 h-70 z"/>
+    <path d="M262 226 h90 l-15 -19 h-60 z"/>
+    <path d="M268 192 h78 l-13 -18 h-52 z"/>
+    <rect x="357" y="196" width="5" height="8"/>
+    <path d="M292 148 h30 l-15 -30 z"/>
+    <rect x="200" y="470" width="380" height="8" opacity="0.5"/>
+    <rect x="150" y="330" width="10" height="150"/>
+    <path d="M118 330 h74 l-12 -16 h-50 z"/>
+    <path d="M124 300 h62 l-10 -15 h-42 z"/>
+    <path d="M130 274 h50 l-9 -14 h-32 z"/>
+    <rect x="560" y="356" width="9" height="124"/>
+    <path d="M532 356 h65 l-11 -15 h-43 z"/>
+    <path d="M538 328 h53 l-9 -14 h-35 z"/>
+  </g>
+  <g fill="#ffffff" opacity="0.08">
+    <rect x="0" y="520" width="800" height="4"/>
+    <rect x="0" y="546" width="800" height="3"/>
+    <rect x="0" y="572" width="800" height="2"/>
+  </g>
+  <text x="40" y="556" font-family="system-ui, sans-serif" font-size="30" font-weight="700" fill="#ffffff" opacity="0.9">清水寺 · 東山</text>
+  <text x="40" y="586" font-family="system-ui, sans-serif" font-size="17" fill="#ffffff" opacity="0.65">Kiyomizu-dera, Kyoto</text>
+</svg>
