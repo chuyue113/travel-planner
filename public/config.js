@@ -19,8 +19,8 @@ window.TP_CONFIG = {
   adminHash: '2b76d4c24ea6c01dc110adbdf4782b6795e3cb896bc8065140c25b5207c1a5ae',
 
   /* 雲端資料庫（Supabase）：填入後自動切換為雲端同步模式 */
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://qafgesdrulsroxablbjm.supabase.co',
+  supabaseAnonKey: 'sb_publishable_e3NSjLvsjbP05xw7fzzq4w_f4UF53SS',
   table: 'trip_state',
   bucket: 'trip-images',
   rowId: 1,
