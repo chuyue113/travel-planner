@@ -1,0 +1,68 @@
+name: 保活 Supabase（避免免費專案因閒置暫停）
+
+# 免費版 Supabase 專案若 7 天內資料庫活動不足會自動暫停。
+# 本任務每天呼叫一次資料庫 API，產生活動，讓專案永不進入暫停。
+# 純免費：公開倉庫的 Actions 額度無上限。
+
+on:
+  schedule:
+    # 每天 UTC 01:00（台北時間 09:00）
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 讀取 Supabase 連線資訊
+        run: |
+          URL=$(grep -oP "supabaseUrl:\s*'\K[^']+" public/config.js || true)
+          KEY=$(grep -oP "supabaseAnonKey:\s*'\K[^']+" public/config.js || true)
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "::error::讀不到 Supabase 連線資訊（public/config.js）"
+            exit 1
+          fi
+          echo "SUPA_URL=$URL" >> "$GITHUB_ENV"
+          echo "SUPA_KEY=$KEY" >> "$GITHUB_ENV"
+          echo "已取得連線資訊：$URL"
+
+      - name: 呼叫資料庫產生活動
+        run: |
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /tmp/resp.txt -w "%{http_code}" \
+              "$SUPA_URL/rest/v1/trip_state?id=eq.1&select=version" \
+              -H "apikey: $SUPA_KEY" \
+              -H "Authorization: Bearer $SUPA_KEY" || echo "000")
+            echo "第 $i 次嘗試：HTTP $CODE"
+            if [ "$CODE" = "200" ]; then
+              echo "回應：$(cat /tmp/resp.txt)"
+              echo "✅ 保活成功"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::保活失敗（最後 HTTP $CODE）"
+          exit 1
+
+      - name: 每月心跳提交（避免 GitHub 60 天後自動停用定時任務）
+        run: |
+          MONTH=$(date -u +"%Y-%m")
+          F=".keepalive/heartbeat.txt"
+          mkdir -p .keepalive
+          if [ ! -f "$F" ] || [ "$(cat "$F")" != "$MONTH" ]; then
+            echo "$MONTH" > "$F"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$F"
+            git commit -m "chore: 保活心跳 $MONTH [skip ci]"
+            git push
+            echo "✅ 已提交本月心跳：$MONTH"
+          else
+            echo "本月心跳已存在（$MONTH），略過"
+          fi
