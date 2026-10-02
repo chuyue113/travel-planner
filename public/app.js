@@ -312,16 +312,15 @@ function showGate() {
   if (!root || root.dataset.on === '1') return;
   root.dataset.on = '1';
   root.innerHTML = `<div class="gate-mask"><div class="gate-card">
-      <div class="gate-logo">🧭</div>
+      <div class="gate-logo">😈</div>
       <h2>${esc(t('gate.brand'))}</h2>
       <p class="muted small">${esc(t('gate.hint'))}</p>
       <form id="gateForm" autocomplete="off">
         <input type="text" id="gateInput" autocomplete="off" autocapitalize="off" spellcheck="false"
-          placeholder="${esc(t('gate.placeholder'))}" aria-label="${esc(t('gate.placeholder'))}">
+          placeholder="" aria-label="${esc(t('gate.inputLabel'))}">
         <button class="btn primary" type="submit">${esc(t('gate.submit'))}</button>
       </form>
       <p class="small lock-err" id="gateErr"></p>
-      <p class="muted small gate-tag">${esc(t('gate.tagline'))}</p>
     </div></div>`;
   root.classList.add('show');
   document.body.classList.add('gated');
