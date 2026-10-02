@@ -1420,13 +1420,8 @@ function folderDetail(f) {
 
   const tiles = items.map((it) => folderTile(f, it)).join('');
 
-  const imgs = folderAllImages(f);
-  const gallery = imgs.length ? `<div class="card mb12">
-      <div class="card-title"><h3>🖼 ${esc(t('fd.photos'))}</h3>
-        <span class="badge">${imgs.length}</span></div>
-      <div class="folder-gallery">${imgs.map((u) =>
-        `<img src="${esc(u)}" alt="" data-act="zoom" data-src="${esc(u)}">`).join('')}</div>
-    </div>` : '';
+  /* 這裡原本有一張「🖼 圖片」彙總卡（列出資料夾內全部圖片與張數）。
+     圖片改為只在點「查看」進入內容後顯示，故此彙總卡移除。 */
 
   return `<div class="page-head"><div class="head-row">
       <div>
@@ -1439,7 +1434,6 @@ function folderDetail(f) {
         <button class="btn primary" data-act="add-folder-item" data-folder="${f.id}">＋ ${esc(t('fd.addItem'))}</button>
       </div>
     </div></div>
-    ${gallery}
     ${items.length ? `<div class="gallery">${tiles}</div>`
       : emptyBox('🗂️', t('fd.noItem'),
         `<div class="mt12"><button class="btn primary" data-act="add-folder-item" data-folder="${f.id}">＋ ${esc(t('fd.addItem'))}</button></div>`)}
